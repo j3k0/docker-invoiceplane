@@ -198,7 +198,9 @@ invoiceplane_configure_url() {
 
 invoiceplane_configure_proxy_ips() {
   echo "Configuring InvoicePlane::Proxy IPS"
-  sed -i "s|^\$config\['proxy_ips'\][ ]*=.*;|\$config\['proxy_ips'\] = '"$INVOICEPLANE_PROXY_IPS"';|" ${INVOICEPLANE_CODEIGNITER_CONFIG}
+  # v1.7.1 config.php reads PROXY_IPS via env() helper
+  # Set it in ipconfig.php so phpdotenv picks it up
+  invoiceplane_set_param "PROXY_IPS" "${PROXY_IPS}"
 }
 
 invoiceplane_configure_database() {
@@ -214,6 +216,22 @@ invoiceplane_configure_database() {
 
 invoiceplane_configure_timezone() {
   update_template ${INVOICEPLANE_INSTALL_DIR}/.user.ini INVOICEPLANE_TIMEZONE
+}
+
+invoiceplane_configure_sess_match_ip() {
+  echo "Configuring InvoicePlane::Session Match IP"
+  invoiceplane_set_param "SESS_MATCH_IP" "${SESS_MATCH_IP}"
+}
+
+invoiceplane_configure_security_headers() {
+  echo "Configuring InvoicePlane::Security Headers"
+  invoiceplane_set_param "X_FRAME_OPTIONS" "${X_FRAME_OPTIONS}"
+  invoiceplane_set_param "ENABLE_X_CONTENT_TYPE_OPTIONS" "${ENABLE_X_CONTENT_TYPE_OPTIONS}"
+}
+
+invoiceplane_configure_legacy_calculation() {
+  echo "Configuring InvoicePlane::Legacy Calculation"
+  invoiceplane_set_param "LEGACY_CALCULATION" "${LEGACY_CALCULATION}"
 }
 
 nginx_configure_virtualhost() {
@@ -476,6 +494,9 @@ configure_invoiceplane() {
   invoiceplane_configure_proxy_ips
   invoiceplane_configure_database
   invoiceplane_configure_timezone
+  invoiceplane_configure_sess_match_ip
+  invoiceplane_configure_security_headers
+  invoiceplane_configure_legacy_calculation
 }
 
 configure_nginx() {
