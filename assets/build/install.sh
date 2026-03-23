@@ -12,7 +12,7 @@ unzip ${INVOICEPLANE_BUILD_DIR}/v${INVOICEPLANE_VERSION}.zip
 mv ip ${INVOICEPLANE_INSTALL_DIR}
 
 mv ${INVOICEPLANE_INSTALL_DIR}/uploads ${INVOICEPLANE_INSTALL_DIR}/uploads.template
-rm -rf ${INVOICEPLANE_BUILD_DIR}/InvoicePlane-${INVOICEPLANE_VERSION}.tar.gz
+rm -rf ${INVOICEPLANE_BUILD_DIR}/v${INVOICEPLANE_VERSION}.zip
 
 (
   echo "default_charset = 'UTF-8'"
@@ -36,3 +36,6 @@ chown root:${INVOICEPLANE_USER} ${INVOICEPLANE_INSTALL_DIR}/.user.ini
 chmod 0644 ${INVOICEPLANE_INSTALL_DIR}/.user.ini
 chmod 0660 ${INVOICEPLANE_INSTALL_DIR}/ipconfig.php
 chmod 1777 ${INVOICEPLANE_INSTALL_DIR}/vendor/mpdf/mpdf/tmp/
+
+# set storage directory permissions (new in 1.7.1)
+chown -R ${INVOICEPLANE_USER}: ${INVOICEPLANE_INSTALL_DIR}/storage/
