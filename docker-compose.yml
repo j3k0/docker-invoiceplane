@@ -1,19 +1,18 @@
-version: '2'
-
 services:
   mysql:
     restart: always
-    image: sameersbn/mysql:5.2.26
+    image: mysql:5.7
     environment:
-    - DB_USER=invoiceplane
-    - DB_PASS=password
-    - DB_NAME=invoiceplane_db
+    - MYSQL_ROOT_PASSWORD=password
+    - MYSQL_USER=invoiceplane
+    - MYSQL_PASSWORD=password
+    - MYSQL_DATABASE=invoiceplane_db
     volumes:
     - /srv/docker/invoiceplane/mysql:/var/lib/mysql
 
   invoiceplane:
     restart: always
-    image: sameersbn/invoiceplane:1.5.9-3
+    image: sameersbn/invoiceplane:1.7.1-1
     command: app:invoiceplane
     environment:
     - DEBUG=false
@@ -35,7 +34,7 @@ services:
 
   nginx:
     restart: always
-    image: sameersbn/invoiceplane:1.5.9-3
+    image: sameersbn/invoiceplane:1.7.1-1
     command: app:nginx
     environment:
     - INVOICEPLANE_PHP_FPM_HOST=invoiceplane
@@ -44,5 +43,5 @@ services:
     - invoiceplane
     ports:
     - "10080:80"
-    volumes_from:
-    - invoiceplane
+    volumes:
+    - /srv/docker/invoiceplane/invoiceplane:/var/lib/invoiceplane
