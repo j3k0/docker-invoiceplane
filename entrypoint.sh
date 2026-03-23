@@ -32,7 +32,7 @@ case ${1} in
     ;;
   app:help)
     echo "Available options:"
-    echo " app:invoiceplane     - Starts the InvoicePlane php5-fpm server (default)"
+    echo " app:invoiceplane     - Starts the InvoicePlane php-fpm server (default)"
     echo " app:nginx            - Starts the nginx server"
     echo " app:backup:create    - Create a backup"
     echo " app:backup:restore   - Restore an existing backup"
