@@ -334,6 +334,76 @@ backup_restore_directory() {
   exec_as_invoiceplane rm -rf ${INVOICEPLANE_BACKUPS_DIR}/${dirname}${extension}
 }
 
+migrate_ipconfig() {
+  local old_version=${1}
+  local new_version=${INVOICEPLANE_VERSION}
+
+  # Strip any Docker revision suffix (e.g. "1.5.9-3" -> "1.5.9") for vercmp compatibility.
+  # Note: the current Dockerfile writes INVOICEPLANE_VERSION (without suffix) to the data-dir
+  # VERSION file, so this should already be clean. The strip is a safety measure.
+  old_version=${old_version%%-*}
+
+  if [[ -z ${old_version} ]] || [[ $(vercmp ${old_version} ${new_version}) -ge 0 ]]; then
+    return 0  # no migration needed (fresh install or same/newer version)
+  fi
+
+  echo "Migrating ipconfig.php from v${old_version} to v${new_version}..."
+
+  local config=${INVOICEPLANE_CONFIGS_DIR}/ipconfig.php
+  if [[ ! -f ${config} ]]; then
+    return 0  # no existing config to migrate
+  fi
+
+  # backup existing config
+  cp ${config} ${config}.pre-${new_version}-backup
+  echo "  Backed up existing config to ipconfig.php.pre-${new_version}-backup"
+
+  # fix first line for phpdotenv compatibility if needed
+  # v1.7.1 ipconfig.php starts with "# <?php ..." (with # prefix)
+  local first_line=$(head -1 ${config})
+  if [[ ${first_line} == "<?php"* ]] && [[ ${first_line} != "#<?php"* ]] && [[ ${first_line} != "# <?php"* ]]; then
+    sed -i '1s/^/# /' ${config}
+    echo "  Fixed first line for phpdotenv compatibility"
+  fi
+
+  # append missing parameters with defaults
+  local -A new_params=(
+    ["CI_ENV"]="production"
+    ["X_FRAME_OPTIONS"]="SAMEORIGIN"
+    ["ENABLE_X_CONTENT_TYPE_OPTIONS"]="true"
+    ["SESS_REGENERATE_DESTROY"]="false"
+    ["SESS_MATCH_IP"]="true"
+    ["LEGACY_CALCULATION"]="true"
+    ["PROXY_IPS"]=""
+    ["PASSWORD_RESET_IP_MAX_ATTEMPTS"]="5"
+    ["PASSWORD_RESET_IP_WINDOW_MINUTES"]="60"
+    ["PASSWORD_RESET_EMAIL_MAX_ATTEMPTS"]="3"
+    ["PASSWORD_RESET_EMAIL_WINDOW_HOURS"]="1"
+    ["SUMEX_SETTINGS"]="false"
+    ["SUMEX_URL"]=""
+  )
+
+  for param in "${!new_params[@]}"; do
+    if ! grep -q "^${param}=" ${config}; then
+      echo "${param}=${new_params[$param]}" >> ${config}
+      echo "  Added ${param}=${new_params[$param]}"
+    fi
+  done
+
+  chown ${INVOICEPLANE_USER}: ${config}
+  chmod 0640 ${config}
+
+  echo ""
+  echo "=================================================="
+  echo "  UPGRADE NOTICE: InvoicePlane upgraded from"
+  echo "  v${old_version} to v${new_version}."
+  echo ""
+  echo "  Visit /index.php/setup to complete the database"
+  echo "  migration. This is required for the upgrade."
+  echo "=================================================="
+  echo ""
+}
+
 initialize_datadir() {
   echo "Initializing datadir..."
   chmod 0755 ${INVOICEPLANE_DATA_DIR}
@@ -361,14 +431,17 @@ initialize_datadir() {
 
   CURRENT_VERSION=
   [[ -f ${INVOICEPLANE_DATA_DIR}/VERSION ]] && CURRENT_VERSION=$(cat ${INVOICEPLANE_DATA_DIR}/VERSION)
-  if [[ ${INVOICEPLANE_VERSION} != ${CURRENT_VERSION} ]]; then
-    echo -n "${INVOICEPLANE_VERSION}" > ${INVOICEPLANE_DATA_DIR}/VERSION
-  fi
 
   # create backups directory
   mkdir -p ${INVOICEPLANE_BACKUPS_DIR}
   chmod -R 0755 ${INVOICEPLANE_BACKUPS_DIR}
   chown -R ${INVOICEPLANE_USER}: ${INVOICEPLANE_BACKUPS_DIR}
+}
+
+update_version() {
+  if [[ ${INVOICEPLANE_VERSION} != ${CURRENT_VERSION} ]]; then
+    echo -n "${INVOICEPLANE_VERSION}" > ${INVOICEPLANE_DATA_DIR}/VERSION
+  fi
 }
 
 install_configuration_templates() {
@@ -392,6 +465,8 @@ install_configuration_templates() {
 initialize_system() {
   initialize_datadir
   install_configuration_templates
+  migrate_ipconfig "${CURRENT_VERSION}"
+  update_version
 }
 
 configure_invoiceplane() {
