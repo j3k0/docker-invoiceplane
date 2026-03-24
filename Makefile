@@ -1,7 +1,7 @@
 all: build
 
 build:
-	@docker build --tag=sameersbn/invoiceplane:latest .
+	@docker build --tag=jeko/invoiceplane:latest .
 
 release: build
-	@docker build --tag=sameersbn/invoiceplane:$(shell cat VERSION) .
+	@docker build --tag=jeko/invoiceplane:$(shell cat VERSION) .
